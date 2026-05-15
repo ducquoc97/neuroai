@@ -146,6 +146,9 @@ class Experiment(BaseExperiment):
         train_loader: DataLoader,
         val_loader: DataLoader | None = None,
     ) -> None:
+        # Seed before any model construction so wrapper/adapters/lazy init do
+        # not depend on RNG already consumed by data preparation or setup.
+        pl.seed_everything(self.seed)
         brain_model, self._n_total_params, self._n_trainable_params = build_brain_model(
             brain_model_config=self.brain_model_config,
             downstream_model_wrapper=self.downstream_model_wrapper,
