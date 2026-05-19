@@ -4,11 +4,19 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import typing as tp
+
 import lightning.pytorch as pl
 import torch
+from neuraltrain.losses import BaseLoss
+from neuraltrain.models.base import BaseModelConfig
+from neuraltrain.optimizers import LightningOptimizer
 from torch import nn
+from torch.utils.data import DataLoader
 
+from .data import Data
 from .main import Experiment
+from .utils import TrainerConfig
 
 
 class _DummyLoss:
@@ -37,25 +45,25 @@ def test_prepare_pl_module_seeds_before_and_after_model_build(monkeypatch) -> No
     monkeypatch.setattr("neuralbench.main.BrainModule", _DummyBrainModule)
 
     experiment = Experiment.model_construct(
-        brain_model_config=object(),
+        brain_model_config=tp.cast(BaseModelConfig, object()),
         downstream_model_wrapper=None,
         pretrained_weights_fname=None,
-        _wandb_logger=None,
+        data=tp.cast(Data, object()),
         target_scaler=None,
         compute_class_weights=False,
-        loss=_DummyLoss(),
-        lightning_optimizer_config=object(),
+        trainer_config=tp.cast(TrainerConfig, object()),
+        loss=tp.cast(BaseLoss, _DummyLoss()),
+        lightning_optimizer_config=tp.cast(LightningOptimizer, object()),
         metrics=[],
         test_full_metrics=[],
         test_full_retrieval_metrics=[],
         seed=seed,
-        _brain_module=None,
     )
 
     for pre_draws in (3, 17):
         torch.manual_seed(999)
         _ = torch.rand(pre_draws)
-        experiment.prepare_pl_module(train_loader=object())
+        experiment.prepare_pl_module(train_loader=tp.cast(DataLoader, object()))
         post_draws.append(torch.rand(4))
 
     pl.seed_everything(seed)
@@ -65,4 +73,3 @@ def test_prepare_pl_module_seeds_before_and_after_model_build(monkeypatch) -> No
     assert torch.allclose(build_draws[1], expected)
     assert torch.allclose(post_draws[0], expected)
     assert torch.allclose(post_draws[1], expected)
-
