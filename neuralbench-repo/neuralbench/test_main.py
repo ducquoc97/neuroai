@@ -5,14 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 import typing as tp
+from types import SimpleNamespace
 
 import lightning.pytorch as pl
 import torch
+from exca import TaskInfra
+from torch import nn
+from torch.utils.data import DataLoader
+
 from neuraltrain.losses import BaseLoss
 from neuraltrain.models.base import BaseModelConfig
 from neuraltrain.optimizers import LightningOptimizer
-from torch import nn
-from torch.utils.data import DataLoader
 
 from .data import Data
 from .main import Experiment
@@ -73,3 +76,65 @@ def test_prepare_pl_module_seeds_before_and_after_model_build(monkeypatch) -> No
     assert torch.allclose(build_draws[1], expected)
     assert torch.allclose(post_draws[0], expected)
     assert torch.allclose(post_draws[1], expected)
+
+
+def test_run_seeds_before_preparing_dataloaders(monkeypatch) -> None:
+    """The experiment seed should be applied before data.prepare() runs."""
+    events: list[str] = []
+    seed_calls: list[tuple[int | None, bool]] = []
+
+    class _DummyData:
+        def prepare(self) -> dict[str, object]:
+            events.append("data.prepare")
+            return {"train": object(), "val": object(), "test": object()}
+
+    def fake_seed_everything(
+        seed: int | None = None, workers: bool = False, verbose: bool = True
+    ) -> int:
+        del verbose
+        seed_calls.append((seed, workers))
+        events.append("seed")
+        return 0 if seed is None else seed
+
+    def fake_setup_run(self) -> None:
+        del self
+        events.append("setup_run")
+
+    def fake_setup_trainer(self):
+        events.append("setup_trainer")
+        return SimpleNamespace(global_rank=1)
+
+    def fake_prepare_pl_module(self, train_loader, val_loader=None) -> None:
+        del self, train_loader, val_loader
+        events.append("prepare_pl_module")
+
+    def fake_cleanup(self, trainer) -> None:
+        del self, trainer
+        events.append("cleanup")
+
+    monkeypatch.setattr("neuralbench.main.pl.seed_everything", fake_seed_everything)
+    monkeypatch.setattr(Experiment, "setup_run", fake_setup_run)
+    monkeypatch.setattr(Experiment, "setup_trainer", fake_setup_trainer)
+    monkeypatch.setattr(Experiment, "prepare_pl_module", fake_prepare_pl_module)
+    monkeypatch.setattr(Experiment, "_cleanup", fake_cleanup)
+
+    seed = 456
+    experiment = Experiment.model_construct(
+        data=tp.cast(Data, _DummyData()),
+        brain_model_config=tp.cast(BaseModelConfig, object()),
+        trainer_config=tp.cast(TrainerConfig, object()),
+        loss=tp.cast(BaseLoss, _DummyLoss()),
+        lightning_optimizer_config=tp.cast(LightningOptimizer, object()),
+        metrics=[],
+        eval_only=True,
+        infra=TaskInfra(version="1", gpus_per_node=0),
+        seed=seed,
+    )
+
+    result = experiment.run()
+
+    assert seed_calls == [(seed, True)]
+    assert events[:4] == ["seed", "setup_run", "data.prepare", "setup_trainer"]
+    assert events[-2:] == ["prepare_pl_module", "cleanup"]
+    assert result["n_total_params"] is None
+    assert result["n_trainable_params"] is None
