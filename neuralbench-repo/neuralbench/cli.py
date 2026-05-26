@@ -86,7 +86,7 @@ def run_benchmark(
     debug : bool
         Run locally with a reduced config (2 epochs, 5 batches).
     local : bool
-        Run locally without applying the reduced debug-mode config.
+        Run locally using the full config; unlike --debug, do not reduce epochs or batches.
     force : bool
         Force re-running experiments.
     retry : bool
