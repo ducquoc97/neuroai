@@ -186,6 +186,10 @@ def build_brain_model(
 
     feat = batch.data["target"]
     n_outputs = feat.shape[-1]
+    input_channel_names: list[str] | None = None
+    neuro_extractor = getattr(train_loader.dataset, "extractors", {}).get("neuro")
+    if neuro_extractor is not None and hasattr(neuro_extractor, "_channels"):
+        input_channel_names = list(neuro_extractor._channels.keys())
 
     # 1) Build the brain model
     if isinstance(brain_model_config, BaseBrainDecodeModel):
@@ -256,10 +260,6 @@ def build_brain_model(
             "n_outputs": (None if downstream_model_wrapper is not None else n_outputs),
         }
         if getattr(brain_model_config, "ch_names_required", False):
-            input_channel_names: list[str] | None = None
-            neuro_extractor = getattr(train_loader.dataset, "extractors", {}).get("neuro")
-            if neuro_extractor is not None and hasattr(neuro_extractor, "_channels"):
-                input_channel_names = list(neuro_extractor._channels.keys())
             assert input_channel_names is not None, (
                 f"{type(brain_model_config).__name__} requires channel names, "
                 "but the neuro extractor did not expose them."
@@ -284,15 +284,11 @@ def build_brain_model(
     # 4) Wrap for downstream task
     if downstream_model_wrapper is not None:
         LOGGER.info("Wrapping brain model for downstream task...")
-        downstream_input_channel_names: list[str] | None = None
-        neuro_extractor = getattr(train_loader.dataset, "extractors", {}).get("neuro")
-        if neuro_extractor is not None and hasattr(neuro_extractor, "_channels"):
-            downstream_input_channel_names = list(neuro_extractor._channels.keys())
         brain_model = downstream_model_wrapper.build(
             brain_model,
             dummy_batch,
             n_outputs,
-            input_channel_names=downstream_input_channel_names,
+            input_channel_names=input_channel_names,
         )
 
     # 5) Log model summary

@@ -154,7 +154,7 @@ class SimilaritySplit(_transf.EventsTransform):
             ].map(sentence_split_mapping)
 
             # Chunk Audio events based on Word segments
-            events = _transf.ChunkEvents(  # type: ignore[call-arg]
+            events = _transf.ChunkEvents(
                 event_type_to_chunk="Audio",
                 event_type_to_split_by="Word",
                 min_duration=3.0,
