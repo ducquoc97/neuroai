@@ -178,9 +178,7 @@ def test_run_seeds_before_preparing_dataloaders(monkeypatch) -> None:
     assert result["n_trainable_params"] is None
 
 
-def test_setup_run_skips_wandb_when_host_blank(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_setup_run_skips_wandb_when_host_blank(monkeypatch, tmp_path: Path) -> None:
     """Blank ``WANDB_HOST`` should disable W&B setup entirely.
 
     The README documents that leaving ``WANDB_HOST=""`` disables W&B logging.

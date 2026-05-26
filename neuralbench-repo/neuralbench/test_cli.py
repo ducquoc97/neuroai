@@ -76,6 +76,7 @@ def test_run_benchmark_cli_help_smoke(
     assert "available datasets per task:" in out
     assert "eeg" in out
 
+
 def test_run_benchmark_cli_local_flag_forwards_to_run_benchmark(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -152,16 +153,10 @@ def test_run_benchmark_local_preserves_official_config_and_runs_locally(
     monkeypatch.setattr(cli, "_validate_inputs", lambda *args, **kwargs: None)
     monkeypatch.setattr(cli, "_warn_slurm_partition", lambda *args, **kwargs: None)
     monkeypatch.setattr(cli, "_resolve_tasks", lambda device, task: ["task_a"])
-    monkeypatch.setattr(
-        cli, "_expand_models", lambda model, device, task_name: [None]
-    )
-    monkeypatch.setattr(
-        cli, "_resolve_datasets", lambda device, task_name, dataset: None
-    )
+    monkeypatch.setattr(cli, "_expand_models", lambda model, device, task_name: [None])
+    monkeypatch.setattr(cli, "_resolve_datasets", lambda device, task_name, dataset: None)
     monkeypatch.setattr(cli, "prepare_task_configs", fake_prepare_task_configs)
-    monkeypatch.setattr(
-        "neuralbench.config_manager._ensure_initialized", lambda: None
-    )
+    monkeypatch.setattr("neuralbench.config_manager._ensure_initialized", lambda: None)
     monkeypatch.setattr("neuralbench.main.BenchmarkAggregator", DummyAggregator)
 
     cli.run_benchmark("eeg", "audiovisual_stimulus", local=True)
