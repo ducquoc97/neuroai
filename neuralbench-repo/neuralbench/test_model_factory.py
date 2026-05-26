@@ -34,10 +34,10 @@ def test_build_brain_model_passes_channel_names_when_requested(monkeypatch) -> N
     """Generic model configs that declare ``ch_names_required`` should receive
     the dataset channel names during build.
 
-    ST-EEGFormer is a plain ``BaseModelConfig`` rather than a braindecode
-    config, so it bypasses ``build_braindecode_model`` and would otherwise miss
-    the per-dataset channel-name metadata it needs to map sensors into its
-    pretrained channel index space.
+    Some custom models are plain ``BaseModelConfig`` instances rather than
+    braindecode configs, so they bypass ``build_braindecode_model`` and would
+    otherwise miss the per-dataset channel-name metadata they need during
+    construction.
     """
 
     build_calls: list[dict[str, object]] = []
