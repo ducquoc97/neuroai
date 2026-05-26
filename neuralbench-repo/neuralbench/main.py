@@ -246,7 +246,7 @@ class Experiment(BaseExperiment):
             with open(savedir / "config.yaml", "w") as outfile:
                 yaml.dump(self.model_dump(), outfile, indent=4, default_flow_style=False)
 
-        if self.wandb_config is not None:
+        if self.wandb_config is not None and self.wandb_config.host not in (None, ""):
             self._wandb_logger = self.setup_wandb_logger(self.wandb_config, str(savedir))
         if self.csv_config is not None:
             self._csv_logger = self.csv_config.build(save_dir=savedir)

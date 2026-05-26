@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import typing as tp
+from pathlib import Path
 from types import SimpleNamespace
 
 import lightning.pytorch as pl
@@ -16,6 +17,7 @@ from torch.utils.data import DataLoader
 from neuraltrain.losses import BaseLoss
 from neuraltrain.models.base import BaseModelConfig
 from neuraltrain.optimizers import LightningOptimizer
+from neuraltrain.utils import WandbLoggerConfig
 
 from .data import Data
 from .main import Experiment
@@ -174,3 +176,43 @@ def test_run_seeds_before_preparing_dataloaders(monkeypatch) -> None:
     assert events[-2:] == ["prepare_pl_module", "cleanup"]
     assert result["n_total_params"] is None
     assert result["n_trainable_params"] is None
+
+
+def test_setup_run_skips_wandb_when_host_blank(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Blank ``WANDB_HOST`` should disable W&B setup entirely.
+
+    The README documents that leaving ``WANDB_HOST=""`` disables W&B logging.
+    This test locks in that ``setup_run`` honors that contract instead of
+    calling ``wandb.login(host="")``.
+    """
+    calls: list[tuple[WandbLoggerConfig, str]] = []
+
+    def fake_setup_wandb_logger(
+        self, wandb_config: WandbLoggerConfig, savedir: str
+    ) -> object:
+        del self
+        calls.append((wandb_config, savedir))
+        return object()
+
+    monkeypatch.setattr(Experiment, "setup_wandb_logger", fake_setup_wandb_logger)
+
+    experiment = Experiment.model_construct(
+        data=tp.cast(Data, object()),
+        brain_model_config=tp.cast(BaseModelConfig, object()),
+        trainer_config=tp.cast(TrainerConfig, object()),
+        loss=tp.cast(BaseLoss, _DummyLoss()),
+        lightning_optimizer_config=tp.cast(LightningOptimizer, object()),
+        metrics=[],
+        infra=TaskInfra(version="1", folder=tmp_path),
+        wandb_config=WandbLoggerConfig(group="eeg/audiovisual_stimulus", host=""),
+    )
+    run_dir = tmp_path / "run"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(TaskInfra, "uid_folder", lambda self: run_dir)
+
+    experiment.setup_run()
+
+    assert calls == []
+    assert experiment._wandb_logger is None

@@ -52,6 +52,7 @@ def run_benchmark(
     downstream_wrapper: str | list[str] | None = None,
     grid: bool = False,
     debug: bool = False,
+    local: bool = False,
     force: bool = False,
     retry: bool = False,
     prepare: bool = False,
@@ -84,6 +85,8 @@ def run_benchmark(
         Expand the task-specific hyperparameter grid.
     debug : bool
         Run locally with a reduced config (2 epochs, 5 batches).
+    local : bool
+        Run locally without applying the reduced debug-mode config.
     force : bool
         Force re-running experiments.
     retry : bool
@@ -124,7 +127,7 @@ def run_benchmark(
 
     _ensure_initialized()
     _validate_inputs(device, task, model, downstream_wrapper)
-    _warn_slurm_partition(debug, prepare=prepare, download=download)
+    _warn_slurm_partition(debug or local, prepare=prepare, download=download)
 
     # --- base config & grid ---
     default_config = load_yaml_config(DEFAULTS_DIR / "config.yaml")
@@ -183,6 +186,14 @@ def run_benchmark(
             quiet=plot_cached,
             retry=retry,
         )
+        if local:
+            for task_config in task_configs:
+                task_config["infra.cluster"] = None
+                if "data" in task_config:
+                    task_config["data.neuro.infra.cluster"] = None
+                    target_cfg = task_config.get("data", {}).get("target", {})
+                    if isinstance(target_cfg, dict) and "infra" in target_cfg:
+                        task_config["data.target.infra.cluster"] = None
         configs.extend(task_configs)
 
     if download:
@@ -197,7 +208,7 @@ def run_benchmark(
 
     agg = BenchmarkAggregator(
         experiments=configs,
-        debug=debug,
+        debug=debug or local,
     )
 
     if not plot_cached:
@@ -246,6 +257,11 @@ def run_benchmark_cli() -> None:
         "--debug",
         action="store_true",
         help="Run in debug mode (locally and smaller config, with infra.mode='force').",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Run locally using the full config; unlike --debug, do not reduce epochs or batches.",
     )
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
@@ -326,6 +342,7 @@ def run_benchmark_cli() -> None:
             downstream_wrapper=args.downstream_wrapper,
             grid=args.grid,
             debug=args.debug,
+            local=args.local,
             force=args.force,
             retry=args.retry,
             prepare=args.prepare,
