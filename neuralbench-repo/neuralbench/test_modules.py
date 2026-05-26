@@ -394,7 +394,7 @@ def test_channel_projection_bipolar_patterns(target, inputs, rename):
     Fully missing rows stay at the Kaiming baseline so the forward output
     (and therefore the gradient through ``|STFT|``) is non-zero.
     """
-    kwargs = dict(
+    kwargs: dict = dict(
         n_target_channels=len(target),
         target_channel_names=target,
         rename_mapping=rename,
