@@ -717,7 +717,7 @@ class PlotRegressionScatter(Callback):
     The figure is logged to W&B under ``"test/regression_scatter"``.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.y_preds: list[torch.Tensor] = []
         self.y_trues: list[torch.Tensor] = []
 

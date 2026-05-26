@@ -284,15 +284,15 @@ def build_brain_model(
     # 4) Wrap for downstream task
     if downstream_model_wrapper is not None:
         LOGGER.info("Wrapping brain model for downstream task...")
-        input_channel_names: list[str] | None = None
+        downstream_input_channel_names: list[str] | None = None
         neuro_extractor = getattr(train_loader.dataset, "extractors", {}).get("neuro")
         if neuro_extractor is not None and hasattr(neuro_extractor, "_channels"):
-            input_channel_names = list(neuro_extractor._channels.keys())
+            downstream_input_channel_names = list(neuro_extractor._channels.keys())
         brain_model = downstream_model_wrapper.build(
             brain_model,
             dummy_batch,
             n_outputs,
-            input_channel_names=input_channel_names,
+            input_channel_names=downstream_input_channel_names,
         )
 
     # 5) Log model summary

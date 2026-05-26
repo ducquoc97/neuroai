@@ -154,12 +154,13 @@ class SimilaritySplit(_transf.EventsTransform):
             ].map(sentence_split_mapping)
 
             # Chunk Audio events based on Word segments
-            events = _transf.ChunkEvents(
-                event_type_to_chunk="Audio",
-                event_type_to_split_by="Word",
-                min_duration=3.0,
-                max_duration=120.0,
-            )(events)
+            chunk_kwargs: dict[str, tp.Any] = {
+                "event_type_to_chunk": "Audio",
+                "event_type_to_split_by": "Word",
+                "min_duration": 3.0,
+                "max_duration": 120.0,
+            }
+            events = _transf.ChunkEvents(**chunk_kwargs)(events)
 
         elif self.stim_event_type == "Keystroke":  # Designed for Levy2025Brain
             # For the Typing dataset, we need to transfer the clusters from the sentences to the

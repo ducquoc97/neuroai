@@ -6,11 +6,15 @@
 
 from __future__ import annotations
 
+import typing as tp
 from collections import OrderedDict
 from types import SimpleNamespace
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
+
+from neuraltrain.models.base import BaseModelConfig
 
 from .model_factory import build_brain_model
 
@@ -26,7 +30,7 @@ class _Loader:
             }
         )
 
-    def __iter__(self):
+    def __iter__(self) -> tp.Iterator[SimpleNamespace]:
         yield self._batch
 
 
@@ -45,7 +49,7 @@ def test_build_brain_model_passes_channel_names_when_requested(monkeypatch) -> N
     class _RecordingConfig:
         ch_names_required = True
 
-        def build(self, **kwargs):
+        def build(self, **kwargs: object) -> nn.Module:
             build_calls.append(kwargs)
             return nn.Identity()
 
@@ -63,10 +67,10 @@ def test_build_brain_model_passes_channel_names_when_requested(monkeypatch) -> N
     )
 
     build_brain_model(
-        brain_model_config=_RecordingConfig(),
+        brain_model_config=tp.cast(BaseModelConfig, _RecordingConfig()),
         downstream_model_wrapper=None,
         pretrained_weights_fname=None,
-        train_loader=loader,
+        train_loader=tp.cast(DataLoader[tp.Any], loader),
     )
 
     assert len(build_calls) == 1

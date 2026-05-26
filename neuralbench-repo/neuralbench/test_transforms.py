@@ -266,7 +266,7 @@ def sleep_events():
 def sleep_onset_events():
     """Two timelines: ``tl_n2`` has W/N1/N2 epochs (pre-onset window); ``tl_no_n2``
     has W/R only (no N2 → no SleepOnsetMarker rows expected)."""
-    rows: list[dict[str, tp.Any]] = []
+    rows = []
     # Timeline with an N2 onset at t=60s, recording spans [0, 120].
     rows.append(
         dict(
