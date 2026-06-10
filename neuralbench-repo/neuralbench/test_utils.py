@@ -22,6 +22,7 @@ from neuralset.extractors.meta import CroppedExtractor
 from .data import Data
 from .utils import (
     _compute_regression_bin_weights,
+    TrainerConfig,
     make_regression_bin_sampler,
     make_weighted_sampler,
     seed_worker,
@@ -153,6 +154,24 @@ def test_make_regression_bin_sampler_balances_bins(mocker):
     counts = torch.bincount(drawn_bins, minlength=4).float()
     proportions = counts / counts.sum()
     assert torch.allclose(proportions, torch.full((4,), 0.25), atol=0.01)
+
+
+def test_effective_log_every_n_steps_clamps_to_train_batches():
+    config = TrainerConfig(log_every_n_steps=20)
+
+    assert config.effective_log_every_n_steps([0, 1, 2]) == 3
+
+
+def test_effective_log_every_n_steps_respects_smaller_user_setting():
+    config = TrainerConfig(log_every_n_steps=2)
+
+    assert config.effective_log_every_n_steps([0, 1, 2]) == 2
+
+
+def test_effective_log_every_n_steps_honors_limit_train_batches():
+    config = TrainerConfig(log_every_n_steps=20, limit_train_batches=1)
+
+    assert config.effective_log_every_n_steps([0, 1, 2]) == 1
 
 
 # --- SequenceLabelEncoder -------------------------------------------------

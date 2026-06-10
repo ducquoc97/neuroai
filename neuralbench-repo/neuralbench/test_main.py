@@ -136,7 +136,8 @@ def test_run_seeds_before_preparing_dataloaders(monkeypatch) -> None:
         del self
         events.append("setup_run")
 
-    def fake_setup_trainer(self):
+    def fake_setup_trainer(self, is_test: bool = False, train_loader=None):
+        del is_test, train_loader
         events.append("setup_trainer")
         return SimpleNamespace(global_rank=1)
 
@@ -174,3 +175,36 @@ def test_run_seeds_before_preparing_dataloaders(monkeypatch) -> None:
     assert events[-2:] == ["prepare_pl_module", "cleanup"]
     assert result["n_total_params"] is None
     assert result["n_trainable_params"] is None
+
+
+def test_setup_trainer_uses_effective_log_every_n_steps(monkeypatch) -> None:
+    captured: dict[str, tp.Any] = {}
+
+    def fake_build(
+        self,
+        logger,
+        callbacks,
+        accelerator=None,
+        devices=None,
+        num_nodes=None,
+        log_every_n_steps=None,
+    ):
+        del logger, callbacks, accelerator, devices, num_nodes
+        captured["log_every_n_steps"] = log_every_n_steps
+        return object()
+
+    monkeypatch.setattr(TrainerConfig, "build", fake_build)
+
+    experiment = Experiment.model_construct(
+        data=tp.cast(Data, SimpleNamespace(target=object())),
+        brain_model_config=tp.cast(BaseModelConfig, object()),
+        trainer_config=TrainerConfig(log_every_n_steps=20),
+        loss=tp.cast(BaseLoss, _DummyLoss()),
+        lightning_optimizer_config=tp.cast(LightningOptimizer, object()),
+        metrics=[],
+        infra=TaskInfra(version="1", gpus_per_node=0),
+    )
+
+    experiment.setup_trainer(train_loader=[0, 1, 2])
+
+    assert captured["log_every_n_steps"] == 3

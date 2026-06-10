@@ -10,6 +10,7 @@ import platform
 import resource
 import time
 import typing as tp
+from collections.abc import Sized
 from pathlib import Path
 
 import lightning.pytorch as pl
@@ -252,7 +253,11 @@ class Experiment(BaseExperiment):
         if self.csv_config is not None:
             self._csv_logger = self.csv_config.build(save_dir=savedir)
 
-    def setup_trainer(self, is_test: bool = False) -> pl.Trainer:
+    def setup_trainer(
+        self,
+        is_test: bool = False,
+        train_loader: Sized | None = None,
+    ) -> pl.Trainer:
         """Create callbacks and setup Trainer."""
         callbacks: list[Callback] = []
         if "confusion_matrix" in [metric.log_name for metric in self.metrics]:
@@ -337,6 +342,11 @@ class Experiment(BaseExperiment):
             accelerator="cpu" if self.infra.gpus_per_node == 0 else "auto",
             devices=1 if is_test else self.infra.gpus_per_node,
             num_nodes=1,
+            log_every_n_steps=(
+                None
+                if is_test
+                else self.trainer_config.effective_log_every_n_steps(train_loader)
+            ),
         )
 
     def _test(
@@ -401,7 +411,7 @@ class Experiment(BaseExperiment):
         pl.seed_everything(self.seed, workers=True)
         self.setup_run()
         loaders = self.data.prepare()
-        trainer = self.setup_trainer()
+        trainer = self.setup_trainer(train_loader=loaders["train"])
         self.prepare_pl_module(loaders["train"], loaders.get("val"))
 
         test_results: dict[str, tp.Any] = {}

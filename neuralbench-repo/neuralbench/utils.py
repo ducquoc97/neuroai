@@ -9,6 +9,7 @@
 import logging
 import random
 import typing as tp
+from collections.abc import Sized
 from copy import copy
 from hashlib import sha1
 from pathlib import Path
@@ -415,6 +416,17 @@ class TrainerConfig(ns.BaseModel):
     monitor: str = "val/loss"
     mode: str = "min"
 
+    def effective_log_every_n_steps(self, train_loader: Sized | None = None) -> int:
+        """Clamp the logging interval to the effective train batches per epoch."""
+        if train_loader is None:
+            return self.log_every_n_steps
+
+        train_batches = len(train_loader)
+        if self.limit_train_batches is not None:
+            train_batches = min(train_batches, self.limit_train_batches)
+
+        return max(1, min(self.log_every_n_steps, train_batches))
+
     def build(
         self,
         logger,
@@ -422,6 +434,7 @@ class TrainerConfig(ns.BaseModel):
         accelerator: str | None = None,
         devices: int | None = None,
         num_nodes: int | None = None,
+        log_every_n_steps: int | None = None,
     ) -> pl.Trainer:
         return pl.Trainer(
             strategy=self.strategy,
@@ -434,7 +447,11 @@ class TrainerConfig(ns.BaseModel):
             limit_val_batches=self.limit_val_batches,
             max_epochs=self.n_epochs,
             enable_progress_bar=self.enable_progress_bar,
-            log_every_n_steps=self.log_every_n_steps,
+            log_every_n_steps=(
+                self.log_every_n_steps
+                if log_every_n_steps is None
+                else log_every_n_steps
+            ),
             num_sanity_val_steps=self.num_sanity_val_steps,
             fast_dev_run=self.fast_dev_run,
             accumulate_grad_batches=self.accumulate_grad_batches,
