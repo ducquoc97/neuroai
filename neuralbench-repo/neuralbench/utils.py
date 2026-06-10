@@ -448,9 +448,7 @@ class TrainerConfig(ns.BaseModel):
             max_epochs=self.n_epochs,
             enable_progress_bar=self.enable_progress_bar,
             log_every_n_steps=(
-                self.log_every_n_steps
-                if log_every_n_steps is None
-                else log_every_n_steps
+                self.log_every_n_steps if log_every_n_steps is None else log_every_n_steps
             ),
             num_sanity_val_steps=self.num_sanity_val_steps,
             fast_dev_run=self.fast_dev_run,

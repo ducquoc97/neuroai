@@ -21,8 +21,8 @@ from neuralset.extractors.meta import CroppedExtractor
 
 from .data import Data
 from .utils import (
-    _compute_regression_bin_weights,
     TrainerConfig,
+    _compute_regression_bin_weights,
     make_regression_bin_sampler,
     make_weighted_sampler,
     seed_worker,
